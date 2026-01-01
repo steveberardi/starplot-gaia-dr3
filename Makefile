@@ -36,7 +36,7 @@ shell: venv/bin/activate
 clean:
 	rm -rf __pycache__
 	rm -rf venv
-	rm -rf build
+	rm -f build.log
 
 build: venv/bin/activate
 	rm -rf $(BUILD_DESTINATION)
@@ -56,15 +56,23 @@ squash: venv/bin/activate
 		--source $(BUILD_DESTINATION) \
 		--num_workers $(BUILD_WORKERS)
 
-# Create catalog of mag 6 to 18 and 25% sampling rate
+# Mag 6-18 at 50% sampling rate
 build-18: BUILD_DESTINATION=$(GAIA_BUILD_PATH_BASE)gaia-18/
-build-18: BUILD_NSIDE=2
+build-18: BUILD_NSIDE=4
 build-18: BUILD_MAG_MIN=6
 build-18: BUILD_MAG_MAX=18
-build-18: BUILD_SAMPLE_RATE=0.25
+build-18: BUILD_SAMPLE_RATE=0.5
 build-18: venv/bin/activate build squash
 
-# Create catalog of mag 9 to 16 and 50% sampling rate
+# Mag 6-18 at 100% sampling rate
+build-18-c: BUILD_DESTINATION=$(GAIA_BUILD_PATH_BASE)gaia-18-c/
+build-18-c: BUILD_NSIDE=4
+build-18-c: BUILD_MAG_MIN=6
+build-18-c: BUILD_MAG_MAX=18
+build-18-c: BUILD_SAMPLE_RATE=1
+build-18-c: venv/bin/activate build squash
+
+# Mag 9-16 at 50% sampling rate
 build-16: BUILD_DESTINATION=$(GAIA_BUILD_PATH_BASE)gaia-16/
 build-16: BUILD_NSIDE=2
 build-16: BUILD_MAG_MIN=9
@@ -72,7 +80,13 @@ build-16: BUILD_MAG_MAX=16
 build-16: BUILD_SAMPLE_RATE=0.5
 build-16: venv/bin/activate build squash
 
-
+# Complete Build, but with min mag of 6
+build-complete: BUILD_DESTINATION=$(GAIA_BUILD_PATH_BASE)gaia-complete/
+build-complete: BUILD_NSIDE=8
+build-complete: BUILD_MAG_MIN=6
+build-complete: BUILD_MAG_MAX=30
+build-complete: BUILD_SAMPLE_RATE=1
+build-complete: venv/bin/activate build squash
 
 
 

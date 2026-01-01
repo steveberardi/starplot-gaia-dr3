@@ -15,9 +15,9 @@ BUILD_PATH = HERE / "build"
 gaia = Catalog(
     # path=Path("/Volumes/Blue2TB/build/gdr3/") / "**" / "*.parquet",
     # path=BUILD_PATH / "edr3" / "**" / "*.parquet",
-    path=Path("/Volumes/starship500/build/gaia-18-squashed") / "**" / "*.parquet",
+    path=Path("/Volumes/starship500/build/gaia-18") / "**" / "*.parquet",
     hive_partitioning=True,
-    healpix_nside=2,
+    healpix_nside=4,
     spatial_query_method="healpix",
 )
 
@@ -109,7 +109,7 @@ p = OpticPlot(
     debug=True,
 )
 p.stars(
-    where=[_.magnitude < 18, _.magnitude > 6],
+    where=[_.magnitude < 18, _.magnitude > 9],
     where_labels=[False],
     catalog=gaia,
     alpha_fn=alpha,
@@ -117,7 +117,7 @@ p.stars(
     # color_fn=color_by_bv,
 )
 p.stars(
-    where=[_.magnitude <= 6],
+    where=[_.magnitude <= 9],
     where_labels=[False],
     alpha_fn=alpha,
     size_fn=size,
