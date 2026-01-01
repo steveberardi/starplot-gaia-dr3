@@ -26,9 +26,9 @@ start = time.time()
 # # results = Star.get(hip=32349)
 # results = Star.find(
 #     where=[
-#         _.healpix_index == 17,
-#         _.magnitude < 14,
-#         _.hip.isnull(),
+#         _.healpix_index == 47,
+#         _.magnitude < 13,
+#         # _.hip.isnull(),
 #     ],
 #     catalog=gaia,
 # )

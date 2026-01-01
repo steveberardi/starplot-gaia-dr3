@@ -10,9 +10,13 @@ VERSION_CHECK=$(shell gh release list \
 		--json tagName \
 		--jq '.[] | select(.tagName == "v$(VERSION)")' | wc -c)
 
+BUILD_WORKERS=12
+
+# Data Paths ------------------------------------------
 GAIA_SOURCE_PATH=/Volumes/Blue2TB/gaia/gdr3/gaia_source/
+GAIA_BUILD_PATH_BASE=/Volumes/starship500/build/
 
-
+# Environment Variables ------------------------------------------
 export STARPLOT_DATA_PATH=./data/
 
 # Development ------------------------------------------
@@ -35,40 +39,48 @@ clean:
 	rm -rf build
 
 build: venv/bin/activate
-	rm -rf build
+	rm -rf $(BUILD_DESTINATION)
 	rm -f build.log
-	@mkdir -p build
-	$(PYTHON) build.py
-
-# Create catalog of mag 6 to 18 and 25% sampling rate
-build-18: venv/bin/activate
-	rm -rf /Volumes/starship500/build/gaia-18
-	rm -f build.log
-	mkdir -p /Volumes/starship500/build/gaia-18
+	@mkdir -p $(BUILD_DESTINATION)
 	$(PYTHON) src/build.py \
 		--source $(GAIA_SOURCE_PATH) \
-		--destination /Volumes/starship500/build/gaia-18/ \
-		--num_workers 10 \
-		--nside 2 \
-		--mag_min 6 \
-		--mag_max 18 \
-		--sample_rate 0.25
+		--destination $(BUILD_DESTINATION) \
+		--num_workers $(BUILD_WORKERS) \
+		--nside $(BUILD_NSIDE) \
+		--mag_min $(BUILD_MAG_MIN) \
+		--mag_max $(BUILD_MAG_MAX) \
+		--sample_rate $(BUILD_SAMPLE_RATE)
 
-squash-18: venv/bin/activate
+squash: venv/bin/activate
 	$(PYTHON) src/squash.py \
-		--source /Volumes/starship500/build/gaia-18/ \
-		--destination /Volumes/starship500/build/gaia-18-squashed/ \
-		--num_workers 10
+		--source $(BUILD_DESTINATION) \
+		--num_workers $(BUILD_WORKERS)
+
+# Create catalog of mag 6 to 18 and 25% sampling rate
+build-18: BUILD_DESTINATION=$(GAIA_BUILD_PATH_BASE)gaia-18/
+build-18: BUILD_NSIDE=2
+build-18: BUILD_MAG_MIN=6
+build-18: BUILD_MAG_MAX=18
+build-18: BUILD_SAMPLE_RATE=0.25
+build-18: venv/bin/activate build squash
+
+# Create catalog of mag 9 to 16 and 50% sampling rate
+build-16: BUILD_DESTINATION=$(GAIA_BUILD_PATH_BASE)gaia-16/
+build-16: BUILD_NSIDE=2
+build-16: BUILD_MAG_MIN=9
+build-16: BUILD_MAG_MAX=16
+build-16: BUILD_SAMPLE_RATE=0.5
+build-16: venv/bin/activate build squash
+
+
+
+
 
 stats: venv/bin/activate
 	$(PYTHON) src/stats.py
 
 m13: venv/bin/activate
 	$(PYTHON) src/m13.py
-
-profile:
-# 	$(PYTHON) -m cProfile -o results.prof m13.py
-	$(PYTHON) -m snakeviz -s -p 8080 -H 0.0.0.0 results.prof
 
 # Releases ------------------------------------------
 release-check:

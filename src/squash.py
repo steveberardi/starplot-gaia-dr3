@@ -8,8 +8,9 @@ import settings
 
 """Squashes parquet files in each healpix partition into a single file, to optimize queries."""
 
+SQUASHED_FILENAME = "stars.parquet"
 
-def squash_partition(partition_name: str, source_path: Path, destination_path: Path):
+def squash_partition(partition_name: str, source_path: Path):
     print(partition_name)
     source_filenames = Path(source_path / partition_name).glob("*.parquet")
     source_filenames = sorted([str(f) for f in source_filenames])
@@ -25,37 +26,40 @@ def squash_partition(partition_name: str, source_path: Path, destination_path: P
         pq.SortingColumn(table.column_names.index(c)) for c in sorting_columns
     ]
 
-    outfile_path = destination_path / partition_name
-    outfile_path.mkdir(parents=True, exist_ok=True)
-
+    outfile_path = source_path / partition_name / SQUASHED_FILENAME
     pq.write_table(
         table,
-        outfile_path / "stars.parquet",
+        outfile_path,
         compression="snappy",
         row_group_size=100_000,
         sorting_columns=sort_columns,
     )
+    return True
 
 
 @click.command()
 @click.option("--source", help="Source path of catalog data")
-@click.option("--destination", help="Destination path")
 @click.option("--num_workers", default=10, help="Number of workers to run")
-def main(source, destination, num_workers):
+def main(source, num_workers):
     source_path = Path(source)
-    destination_path = Path(destination)
     partition_names = sorted(
         [item.name for item in source_path.iterdir() if item.is_dir()]
     )
 
     process_args = [
-        (partition_name, source_path, destination_path)
+        (partition_name, source_path)
         for partition_name in partition_names
     ]
 
     with multiprocessing.Pool(processes=num_workers) as pool:
-        pool.starmap(squash_partition, process_args)
+        results = pool.starmap(squash_partition, process_args)
 
+    if all(results):
+        for partition_name in partition_names:
+            source_files = Path(source_path / partition_name).glob("*.parquet")
+            for source_file in source_files:
+                if source_file.name != SQUASHED_FILENAME:
+                    source_file.unlink()
 
 if __name__ == "__main__":
     main()
