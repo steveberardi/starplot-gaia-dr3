@@ -3,11 +3,11 @@ import time
 import logging
 import math
 import multiprocessing
-
+import random
 from logging.handlers import QueueHandler
-
 from pathlib import Path
 
+import click
 import polars as pl
 from shapely.geometry import Point
 from skyfield.api import position_of_radec, load_constellation_map
@@ -22,21 +22,6 @@ __version__ = "0.1.0"
 HERE = Path(__file__).resolve().parent
 DATA_PATH = Path("/Volumes/Blue2TB/gaia/gdr3/")
 BUILD_PATH = HERE / "build"
-
-# logger = logging.getLogger(__name__)
-# logger.setLevel(logging.INFO)
-# console_handler = logging.StreamHandler()
-# file_handler = logging.FileHandler("build.log", mode='a')
-# logger.addHandler(console_handler)
-# logger.addHandler(file_handler)
-# formatter = logging.Formatter(
-#     "{asctime} - {levelname} - {message}",
-#     style="{",
-#     datefmt="%Y-%m-%d %H:%M",
-# )
-# console_handler.setFormatter(formatter)
-# file_handler.setFormatter(formatter)
-
 
 constellation_map = load_constellation_map()
 
@@ -66,8 +51,8 @@ crossmatch_tyc = read_crossmatch(
 )
 
 
-def stars(index, logger):
-    source_path = DATA_PATH / "gaia_source"
+def stars(index, logger, source, mag_min, mag_max, sample_rate):
+    source_path = Path(source)
     source_filenames = sorted(list(source_path.glob("*.csv.gz")))
 
     try:
@@ -102,12 +87,18 @@ def stars(index, logger):
         ],
     )
     for row in df.iter_rows(named=True):
+        if sample_rate < 1 and random.random() > sample_rate:
+            continue
+
         phot_g_mean_mag, bp_rp = row["phot_g_mean_mag"], row["bp_rp"]
         if not phot_g_mean_mag or not bp_rp:
             skipped_no_mag += 1
             continue
 
         bv, v = get_bv_v(phot_g_mean_mag, bp_rp)
+
+        if v < mag_min or v > mag_max:
+            continue
 
         ra = round(row["ra"], 6)
         dec = round(row["dec"], 6)
@@ -156,12 +147,21 @@ def stars(index, logger):
     # logger.info(f"over_threshold_count = {over_threshold_count:,}")
 
 
-def build(index, logger):
+def build(
+    index,
+    logger,
+    source,
+    destination,
+    nside,
+    mag_min,
+    mag_max,
+    sample_rate,
+):
     """Builds a single source file"""
     logger.info(f"Building... {index}")
     Catalog.build(
-        objects=stars(index, logger),
-        path=BUILD_PATH / "edr3",
+        objects=stars(index, logger, source, mag_min, mag_max, sample_rate),
+        path=destination,
         chunk_size=1_000_000,
         columns=[
             "pk",
@@ -182,7 +182,7 @@ def build(index, logger):
         partition_columns=["healpix_index"],
         compression="snappy",
         row_group_size=100_000,
-        healpix_nside=8,
+        healpix_nside=nside,
     )
 
 
@@ -222,14 +222,18 @@ def init_worker(queue):
     root.setLevel(logging.INFO)
 
 
-def worker_process(queue, chunk, worker_id):
+def worker_process(queue, chunk, worker_id, **kwargs):
     init_worker(queue)
     name = multiprocessing.current_process().name
     logger = logging.getLogger(f"build.{worker_id}")
     logger.info(f"Starting worker: {name} | {chunk}")
 
+    seed = kwargs.pop("seed")
+    if seed:
+        random.seed(seed)
+
     for index in chunk:
-        build(index, logger)
+        build(index, logger, **kwargs)
 
     logger.info(f"Worker finished: {name} | {chunk}")
 
@@ -240,15 +244,34 @@ def chunks(items, n):
         yield items[i : i + n]
 
 
-def main():
+@click.command()
+@click.option("--source", help="Source path of Gaia DR3 data")
+@click.option("--destination", help="Destination path")
+@click.option("--start", default=0, help="What file to start at (when sorted)")
+@click.option(
+    "--stop", default=3389, help="What file to stop at (when sorted), inclusive"
+)
+@click.option("--num_workers", default=10, help="Number of workers to run")
+@click.option("--nside", default=8, help="HEALPix NSIDE to use")
+@click.option("--mag_min", default=6, help="Minimum magnitude")
+@click.option("--mag_max", default=18, help="Maximum magnitude")
+@click.option("--seed", default=2016, help="Random seed")
+@click.option(
+    "--sample_rate", default=1.0, help="Random sampling rate of stars to include"
+)
+def main(
+    source: str,
+    destination: str,
+    start: int,
+    stop: int,
+    num_workers: int,
+    nside: int,
+    mag_min: float,
+    mag_max: float,
+    seed: int,
+    sample_rate: float,
+):
     time_start = time.time()
-
-    # 3387 total files
-
-    start = 0
-    stop = 3390  # inclusive
-
-    num_workers = 10
 
     items = [n for n in range(start, stop + 1)]
     chunk_size = math.ceil(len(items) / num_workers)
@@ -270,7 +293,18 @@ def main():
     for i, chunk in enumerate(items_chunked):
         worker = multiprocessing.Process(
             target=worker_process,
-            args=(queue, chunk, i + 2),  # add 2 cause first process is listener
+            kwargs=dict(
+                queue=queue,
+                chunk=chunk,
+                worker_id=i + 2,  # add 2 because first process is listener
+                source=source,
+                destination=destination,
+                nside=nside,
+                mag_min=mag_min,
+                mag_max=mag_max,
+                seed=seed,
+                sample_rate=sample_rate,
+            ),
         )
         workers.append(worker)
         worker.start()

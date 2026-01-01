@@ -13,35 +13,31 @@ HERE = Path(__file__).resolve().parent
 BUILD_PATH = HERE / "build"
 
 gaia = Catalog(
-    path=BUILD_PATH / "edr3" / "**" / "*.parquet",
+    # path=Path("/Volumes/Blue2TB/build/gdr3/") / "**" / "*.parquet",
+    # path=BUILD_PATH / "edr3" / "**" / "*.parquet",
+    path=Path("/Volumes/starship500/build/gaia-18-squashed") / "**" / "*.parquet",
     hive_partitioning=True,
-    healpix_nside=8,
+    healpix_nside=2,
+    spatial_query_method="healpix",
 )
 
 start = time.time()
 
-# results = Star.get(hip=32349)
-results = Star.find(
-    where=[
-        _.healpix_index == 25,
-        _.magnitude < 8,
-        _.hip.notnull(),
-    ],
-    catalog=gaia,
-)
-print(len(results))
-# p = results.to_polars()
-# print(results.count())
-# for s in results[:5]:
-#     print(s.geometry)
+# # results = Star.get(hip=32349)
+# results = Star.find(
+#     where=[
+#         _.healpix_index == 17,
+#         _.magnitude < 14,
+#         _.hip.isnull(),
+#     ],
+#     catalog=gaia,
+# )
+# print(len(results))
 
-# results = Star.find(where=[_.healpix_index == 1, _.magnitude < 8], catalog=gaia)
-# print(results.count())
+# duration = time.time() - start
 
-duration = time.time() - start
-
-print(duration)
-exit()
+# print(duration)
+# exit()
 
 
 def size(star: Star) -> float:
@@ -56,6 +52,8 @@ def size(star: Star) -> float:
         return (13 - m) ** 1.8 * 9
     elif m < 12:
         return 4.8 * 6
+    elif m < 14:
+        return 10
 
     return 3
 
@@ -67,9 +65,9 @@ def alpha(star: Star) -> float:
     if m < 10:
         return 1
     elif m < 12:
-        return 0.7
-    elif m < 14:
-        return 0.6
+        return 0.9
+    elif m < 15:
+        return 0.76
 
     return 0.5
 
@@ -79,7 +77,7 @@ dt = datetime(2023, 12, 16, 21, 0, 0, tzinfo=ZoneInfo("US/Pacific"))
 style = PlotStyle().extend(
     extensions.GRAYSCALE_DARK,
     extensions.OPTIC,
-    {"star": {"marker": {"edge_color": "#fff"}}},
+    {"star": {"marker": {"color": "#fff", "edge_color": "#fff"}}},
 )
 
 observer = Observer(
@@ -89,6 +87,7 @@ observer = Observer(
 )
 
 target = DSO.get(m="13")
+# target = DSO.get(m="42")
 p = OpticPlot(
     ra=target.ra,
     dec=target.dec,
@@ -97,23 +96,34 @@ p = OpticPlot(
     optic=Refractor(
         focal_length=714,
         eyepiece_focal_length=7,
-        eyepiece_fov=82,
+        eyepiece_fov=100,
     ),
+    # optic=Binoculars(
+    #     fov=65,
+    #     magnification=10,
+    # ),
     style=style,
     resolution=4096,
-    scale=0.56,
+    scale=0.236,
     raise_on_below_horizon=False,
     debug=True,
 )
 p.stars(
-    where=[_.magnitude < 18],
+    where=[_.magnitude < 18, _.magnitude > 6],
     where_labels=[False],
     catalog=gaia,
     alpha_fn=alpha,
     size_fn=size,
     # color_fn=color_by_bv,
 )
-
+p.stars(
+    where=[_.magnitude <= 6],
+    where_labels=[False],
+    alpha_fn=alpha,
+    size_fn=size,
+    # color_fn=color_by_bv,
+)
+print(p.magnitude_range)
 p.export("m13.png", padding=0.1, transparent=True)
 
 
