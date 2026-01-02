@@ -15,7 +15,7 @@ BUILD_PATH = HERE / "build"
 gaia = Catalog(
     # path=Path("/Volumes/Blue2TB/build/gdr3/") / "**" / "*.parquet",
     # path=BUILD_PATH / "edr3" / "**" / "*.parquet",
-    path=Path("/Volumes/starship500/build/gaia-18") / "**" / "*.parquet",
+    path=Path("/Volumes/starship500/build/gaia-18-c") / "**" / "*.parquet",
     hive_partitioning=True,
     healpix_nside=4,
     spatial_query_method="healpix",
@@ -96,7 +96,7 @@ p = OpticPlot(
     optic=Refractor(
         focal_length=714,
         eyepiece_focal_length=7,
-        eyepiece_fov=100,
+        eyepiece_fov=82,
     ),
     # optic=Binoculars(
     #     fov=65,
@@ -123,7 +123,7 @@ p.stars(
     size_fn=size,
     # color_fn=color_by_bv,
 )
-print(p.magnitude_range)
+# print(p.magnitude_range)
 p.export("m13.png", padding=0.1, transparent=True)
 
 

@@ -56,29 +56,39 @@ squash: venv/bin/activate
 		--source $(BUILD_DESTINATION) \
 		--num_workers $(BUILD_WORKERS)
 
+archive: venv/bin/activate
+	rm -rf $(BUILD_DESTINATION_ARCHIVE)
+	@mkdir -p $(BUILD_DESTINATION_ARCHIVE)
+	$(PYTHON) src/archive.py \
+		--source $(BUILD_DESTINATION) \
+		--destination $(BUILD_DESTINATION_ARCHIVE)
+
 # Mag 6-18 at 50% sampling rate
 build-18: BUILD_DESTINATION=$(GAIA_BUILD_PATH_BASE)gaia-18/
+build-18: BUILD_DESTINATION_ARCHIVE=$(GAIA_BUILD_PATH_BASE)gaia-18-archive/
 build-18: BUILD_NSIDE=4
 build-18: BUILD_MAG_MIN=6
 build-18: BUILD_MAG_MAX=18
 build-18: BUILD_SAMPLE_RATE=0.5
-build-18: venv/bin/activate build squash
+build-18: venv/bin/activate build squash archive
 
 # Mag 6-18 at 100% sampling rate
 build-18-c: BUILD_DESTINATION=$(GAIA_BUILD_PATH_BASE)gaia-18-c/
+build-18-c: BUILD_DESTINATION_ARCHIVE=$(GAIA_BUILD_PATH_BASE)gaia-18-c-archive/
 build-18-c: BUILD_NSIDE=4
 build-18-c: BUILD_MAG_MIN=6
 build-18-c: BUILD_MAG_MAX=18
 build-18-c: BUILD_SAMPLE_RATE=1
-build-18-c: venv/bin/activate build squash
+build-18-c: venv/bin/activate build squash archive
 
 # Mag 9-16 at 50% sampling rate
 build-16: BUILD_DESTINATION=$(GAIA_BUILD_PATH_BASE)gaia-16/
+build-16: BUILD_DESTINATION_ARCHIVE=$(GAIA_BUILD_PATH_BASE)gaia-16-archive/
 build-16: BUILD_NSIDE=2
 build-16: BUILD_MAG_MIN=9
 build-16: BUILD_MAG_MAX=16
 build-16: BUILD_SAMPLE_RATE=0.5
-build-16: venv/bin/activate build squash
+build-16: venv/bin/activate build squash archive
 
 # Complete Build, but with min mag of 6
 build-complete: BUILD_DESTINATION=$(GAIA_BUILD_PATH_BASE)gaia-complete/
@@ -86,7 +96,7 @@ build-complete: BUILD_NSIDE=8
 build-complete: BUILD_MAG_MIN=6
 build-complete: BUILD_MAG_MAX=30
 build-complete: BUILD_SAMPLE_RATE=1
-build-complete: venv/bin/activate build squash
+build-complete: venv/bin/activate build squash archive
 
 
 
