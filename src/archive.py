@@ -5,14 +5,13 @@ from pathlib import Path
 import click
 
 
-def get_dir_size(p: Path):
+def get_dir_size(p: Path) -> int:
+    """Returns total size of all files in a directory, in bytes."""
     total = 0
     for entry in os.scandir(p):
-        # Use entry.is_file() and entry.stat().st_size directly
         if entry.is_file():
             total += entry.stat().st_size
         elif entry.is_dir():
-            # Recursively call function for subdirectories
             total += get_dir_size(entry.path)
     return total
 

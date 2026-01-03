@@ -19,10 +19,6 @@ from utils import get_bv_v
 
 __version__ = "0.1.0"
 
-HERE = Path(__file__).resolve().parent
-DATA_PATH = Path("/Volumes/Blue2TB/gaia/gdr3/")
-BUILD_PATH = HERE / "build"
-
 constellation_map = load_constellation_map()
 
 
@@ -36,23 +32,17 @@ def read_crossmatch(source_path, cast=int):
         }
 
 
-crossmatch_hip = read_crossmatch(
-    source_path=DATA_PATH
-    / "cross_match"
-    / "hipparcos2_best_neighbor"
-    / "Hipparcos2BestNeighbour.csv"
-)
-crossmatch_tyc = read_crossmatch(
-    source_path=DATA_PATH
-    / "cross_match"
-    / "tycho2tdsc_merge_neighbourhood"
-    / "tycho2tdsc_merge_neighbourhood.csv",
-    cast=str,
-)
-
-
-def stars(index, logger, source, mag_min, mag_max, sample_rate):
-    source_path = Path(source)
+def stars(
+    index,
+    logger,
+    gaia_path,
+    mag_min,
+    mag_max,
+    sample_rate,
+    crossmatch_hip,
+    crossmatch_tyc,
+):
+    source_path = Path(gaia_path) / "gaia_source"
     source_filenames = sorted(list(source_path.glob("*.csv.gz")))
 
     try:
@@ -150,12 +140,14 @@ def stars(index, logger, source, mag_min, mag_max, sample_rate):
 def build(
     index,
     logger,
-    source,
+    gaia_path,
     destination,
     nside,
     mag_min,
     mag_max,
     sample_rate,
+    crossmatch_hip,
+    crossmatch_tyc,
 ):
     """Builds a single source file"""
     logger.info(f"Building... {index}")
@@ -164,7 +156,16 @@ def build(
         healpix_nside=nside,
     )
     catalog.build(
-        objects=stars(index, logger, source, mag_min, mag_max, sample_rate),
+        objects=stars(
+            index,
+            logger,
+            gaia_path,
+            mag_min,
+            mag_max,
+            sample_rate,
+            crossmatch_hip,
+            crossmatch_tyc,
+        ),
         chunk_size=1_000_000,
         columns=[
             "pk",
@@ -291,6 +292,22 @@ def main(
     logger = logging.getLogger("build.main")
     logger.info(f"Starting {num_workers} workers...")
 
+    gaia_path = Path(source)
+
+    crossmatch_hip = read_crossmatch(
+        source_path=gaia_path
+        / "cross_match"
+        / "hipparcos2_best_neighbor"
+        / "Hipparcos2BestNeighbour.csv"
+    )
+    crossmatch_tyc = read_crossmatch(
+        source_path=gaia_path
+        / "cross_match"
+        / "tycho2tdsc_merge_neighbourhood"
+        / "tycho2tdsc_merge_neighbourhood.csv",
+        cast=str,
+    )
+
     workers = []
     for i, chunk in enumerate(items_chunked):
         worker = multiprocessing.Process(
@@ -299,13 +316,15 @@ def main(
                 queue=queue,
                 chunk=chunk,
                 worker_id=i + 2,  # add 2 because first process is listener
-                source=source,
+                gaia_path=source,
                 destination=destination,
                 nside=nside,
                 mag_min=mag_min,
                 mag_max=mag_max,
                 seed=seed,
                 sample_rate=sample_rate,
+                crossmatch_hip=crossmatch_hip,
+                crossmatch_tyc=crossmatch_tyc,
             ),
         )
         workers.append(worker)

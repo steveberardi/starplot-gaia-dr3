@@ -13,7 +13,7 @@ VERSION_CHECK=$(shell gh release list \
 BUILD_WORKERS=12
 
 # Data Paths ------------------------------------------
-GAIA_SOURCE_PATH=/Volumes/Blue2TB/gaia/gdr3/gaia_source/
+GAIA_SOURCE_PATH=/Volumes/Blue2TB/gaia/gdr3/
 GAIA_BUILD_PATH_BASE=/Volumes/starship500/build/
 
 # Environment Variables ------------------------------------------
