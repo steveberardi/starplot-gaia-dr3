@@ -24,7 +24,6 @@ install: venv/bin/activate
 
 format: venv/bin/activate
 	@$(PYTHON) -m ruff format src/*.py $(ARGS)
-	@$(PYTHON) -m ruff check src/*.py --fix $(ARGS)
 
 venv/bin/activate: requirements.txt
 	python -m venv venv

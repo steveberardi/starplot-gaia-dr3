@@ -5,9 +5,10 @@ from pathlib import Path
 import time
 
 from starplot import Star, OpticPlot, DSO, Observer, _
-from starplot.models import Binoculars
+from starplot.models import Binoculars, Refractor
 from starplot.styles import PlotStyle, extensions
 from starplot.data.catalogs import Catalog
+from starplot.callables import color_by_bv
 
 HERE = Path(__file__).resolve().parent
 BUILD_PATH = HERE / "build"
@@ -23,16 +24,21 @@ gaia = Catalog(
 
 start = time.time()
 
-# # results = Star.get(hip=32349)
-# results = Star.find(
-#     where=[
-#         _.healpix_index == 47,
-#         _.magnitude < 13,
-#         # _.hip.isnull(),
-#     ],
-#     catalog=gaia,
-# )
-# print(len(results))
+# ctr = 0
+# for n in range(193):
+#     results = Star.find(
+#         where=[
+#             _.healpix_index == n
+#         ],
+#         catalog=gaia,
+#     )
+#     count = len(results)
+#     ctr += count
+#     print(n, count, ctr)
+
+
+# print("total")
+# print(ctr)
 
 # duration = time.time() - start
 
@@ -88,25 +94,25 @@ observer = Observer(
 
 target = DSO.get(m="13")
 # target = DSO.get(ngc="869")
-# target = DSO.get(ngc="5139")
-# target = DSO.get(m="42")
+target = DSO.get(ngc="5139")
+# target = DSO.get(m="11")
 p = OpticPlot(
     ra=target.ra,
     dec=target.dec,
     observer=observer,
     # Refractor Telescope
-    # optic=Refractor(
-    #     focal_length=714,
-    #     eyepiece_focal_length=9,
-    #     eyepiece_fov=100,
-    # ),
-    optic=Binoculars(
-        fov=65,
-        magnification=35,
+    optic=Refractor(
+        focal_length=714,
+        eyepiece_focal_length=11,
+        eyepiece_fov=100,
     ),
+    # optic=Binoculars(
+    #     fov=65,
+    #     magnification=35,
+    # ),
     style=style,
     resolution=4096,
-    scale=0.28,
+    scale=0.25,
     raise_on_below_horizon=False,
     debug=True,
 )
